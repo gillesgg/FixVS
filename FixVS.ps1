@@ -29,7 +29,7 @@ function validateOptOutOfMoveToChromedWindowFix($itemssection)
    return $false
 }
 
-
+# Update the section
 function validateDoNotOptOutOfMoveToChromedWindowFix($itemssection, [ref] $OptOutOfMoveToChromedWindowFix, [ref] $DoNotOptOutOfMoveToChromedWindowFix)
 {
    foreach ($itemsection in $itemssection)
@@ -42,9 +42,7 @@ function validateDoNotOptOutOfMoveToChromedWindowFix($itemssection, [ref] $OptOu
    return $false
 }
 
-
-
-
+# Update the devenv.exe.config
 function fixsection($itemssectionText, $OptOutOfMoveToChromedWindowFix, $DoNotOptOutOfMoveToChromedWindowFix)
 {
     if ($OptOutOfMoveToChromedWindowFix -eq $false)
@@ -62,6 +60,7 @@ function fixsection($itemssectionText, $OptOutOfMoveToChromedWindowFix, $DoNotOp
     return $itemssectionText
 }
 
+# Backup the devenv.exe.config file
 function backupconfig($appConfig, $devenvconfig)
 {
     Try 
@@ -71,7 +70,6 @@ function backupconfig($appConfig, $devenvconfig)
         if ($FileExists-eq $false)
         {
             Copy-Item $devenvconfig -Destination $backupconfig -Force
-
         }
     }
     Catch
@@ -83,6 +81,7 @@ function backupconfig($appConfig, $devenvconfig)
     return $true
 }
 
+# save the devenv.exe.config file
 function saveconfig($appConfig, $devenvconfig)
 {
     Try 
@@ -97,7 +96,7 @@ function saveconfig($appConfig, $devenvconfig)
 }
 
 
-
+# test if the script start as Admin
 function testadmin()
 {
     if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) 
@@ -123,7 +122,7 @@ function rollbackissue($ProgramPath)
         if (Test-Path $devenvconfigbackup)
         {
             Copy-Item $devenvconfigbackup -Destination $devenvconfig -Force
-            Write-Host "Rollback " $devenvconfig " from : " $devenvconfigbackup -ForegroundColor Yellow
+            Write-Host "Rollback " $devenvconfig " from : " $devenvconfigbackup -ForegroundColor Green
             Remove-Item $devenvconfigbackup -Force
         }
         else
@@ -155,13 +154,14 @@ function fixwpfissue($ProgramPath)
                 $DoNotOptOutOfMoveToChromedWindowFix = validateDoNotOptOutOfMoveToChromedWindowFix $itemssection                  
                 if ($OptOutOfMoveToChromedWindowFix -eq $false -or $OptOutOfMoveToChromedWindowFix -eq $false)
                 {
-                    Write-Host "patch Visual Studio clsconfig file for file:" $devenvconfig  -ForegroundColor Yellow
+                    Write-Host "Patch Visual Studio config file:" $devenvconfig  -ForegroundColor Green
                     $itemssectionText = fixsection $itemssectionText $OptOutOfMoveToChromedWindowFix $DoNotOptOutOfMoveToChromedWindowFix
                     $root.runtime.AppContextSwitchOverrides.value = $itemssectionText
                     $ret = backupconfig $appConfig $devenvconfig
                     if ($ret -eq $true)
                     {
-                        saveconfig $appConfig $devenvconfig                       
+                        saveconfig $appConfig $devenvconfig
+                        fixvsixinstance $instance                        
                     }
                  }
                  else
@@ -177,7 +177,8 @@ function fixwpfissue($ProgramPath)
     }
 }
 
-
+# Get the list of devenv.exe using vswhere.exe
+# $ProgramPath - list of devenv.exe
 function getLatestVisualStudioWithDesktopWorkloadPath($ProgramPath)
 { 
  
@@ -189,6 +190,7 @@ function getLatestVisualStudioWithDesktopWorkloadPath($ProgramPath)
     [xml]$asXml = $output
     foreach ($instance in $asXml.instances.instance)
     {
+        
 
         $ProgramPath.Add($instance.productPath)  > $null
     }
@@ -205,10 +207,18 @@ function getLatestVisualStudioWithDesktopWorkloadPath($ProgramPath)
   }
 }
 
+# Run devenv /updateConfiguration to update the configuration
+# $ProgramPath - list of devenv.exe 
+function fixvsixinstance($ProgramPath)
+{
+    if (Test-Path $ProgramPath)
+    {
+         Start-Process $ProgramPath -ArgumentList "/updateConfiguration"
+    }
+}
+
 
 $param1=$args[0]
-
-
 
 
 if ($param1 -eq '-help')
@@ -246,4 +256,4 @@ if (testadmin -eq $true)
           return;
         }
      }
- }
+}
