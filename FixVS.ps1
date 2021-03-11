@@ -177,6 +177,38 @@ function fixwpfissue($ProgramPath)
     }
 }
 
+
+
+#Computer\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\11.0 - 2012
+
+
+function getLatestVisualStudioWithDesktopWorkloadPathlegacy($ProgramPath)
+{
+    $vs2012key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\11.0'
+    $vs2015key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0'
+    $valuekey = 'InstallDir'
+     
+    if (Test-Path $vs2012key) 
+    {
+        $vs2012 = Get-ItemProperty $vs2012key $valuekey  -ErrorAction SilentlyContinue
+        if ($vs2012)
+        {
+            $vs2012path = Join-Path $vs2012.InstallDir "devenv.exe"
+            $ProgramPath.Add($vs2012path)  > $null
+        }
+    }
+
+    if (Test-Path $vs2015key)
+    {
+        $vs2015 = Get-ItemProperty $vs2015key $valuekey  -ErrorAction SilentlyContinue
+        if ($vs2015)
+        {
+            $vs2015path = Join-Path $vs2015.InstallDir "devenv.exe"
+            $ProgramPath.Add($vs2015path)  > $null
+        }
+    }
+}
+
 # Get the list of devenv.exe using vswhere.exe
 # $ProgramPath - list of devenv.exe
 function getLatestVisualStudioWithDesktopWorkloadPath($ProgramPath)
@@ -221,6 +253,8 @@ function fixvsixinstance($ProgramPath)
 $param1=$args[0]
 
 
+
+
 if ($param1 -eq '-help')
 {
       Write-Host "Fix Visual Studio 2019 and Visual Studio 2017 crash issue with KB4598301" -ForegroundColor Green
@@ -236,7 +270,7 @@ if (testadmin -eq $true)
 {
      $ProgramPath = New-Object System.Collections.ArrayList($null)
      getLatestVisualStudioWithDesktopWorkloadPath $ProgramPath
-
+     getLatestVisualStudioWithDesktopWorkloadPathlegacy $ProgramPath
      if ($param1 -eq '-rollback')
      {
         rollbackissue $ProgramPath
